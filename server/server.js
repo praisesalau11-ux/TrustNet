@@ -1,260 +1,271 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-
-import {
-    adminDb
-} from "./services/firebaseAdmin.js";
-
-import authRoutes from "./routes/authRoutes.js";
-
-
 /* ==========================================
-   TrustNet Backend
+   GRADEFLOW
    File: server/server.js
 
-   Main API Server
+   Main Express Server
 ========================================== */
+
+import "dotenv/config";
+
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
+import authRoutes from "./routes/auth.js";
+import aiRoutes from "./routes/ai.js";
 
 
 /* ==========================================
-   LOAD ENVIRONMENT VARIABLES
+   APP
 ========================================== */
 
-dotenv.config();
+const app = express();
 
 
 /* ==========================================
-   CREATE EXPRESS APPLICATION
-========================================== */
-
-const app =
-    express();
-
-
-/* ==========================================
-   SERVER CONFIGURATION
+   CONFIG
 ========================================== */
 
 const PORT =
-    process.env.PORT || 5000;
+    Number(process.env.PORT) || 10000;
+
+const FRONTEND_URL =
+    process.env.FRONTEND_URL || "";
+
+
+/* ==========================================
+   SECURITY
+========================================== */
+
+app.disable("x-powered-by");
+
+app.use(
+    helmet({
+        crossOriginResourcePolicy: false
+    })
+);
 
 
 /* ==========================================
    CORS
 ========================================== */
 
+/*
+   FRONTEND_URL can contain multiple origins:
+
+   FRONTEND_URL=https://grades-flow.netlify.app,http://127.0.0.1:5500,http://localhost:5500
+
+   This allows:
+   - Production Netlify site
+   - Local Live Server using 127.0.0.1
+   - Local Live Server using localhost
+*/
+
+const configuredOrigins = FRONTEND_URL
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+
+/*
+   Always allow these development origins.
+   This fixes local testing from Live Server.
+*/
+
+const developmentOrigins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500"
+];
+
+
+/*
+   Combine configured + development origins
+   and remove duplicates.
+*/
+
+const allowedOrigins = [
+    ...new Set([
+        ...configuredOrigins,
+        ...developmentOrigins
+    ])
+];
+
+
+console.log(
+    "GradeFlow CORS allowed origins:",
+    allowedOrigins
+);
+
+
 app.use(
     cors({
-        origin: true,
-        credentials: true
+        origin(origin, callback) {
+
+            /*
+               Requests without an Origin header are allowed.
+
+               Examples:
+               - Render health checks
+               - Server-to-server requests
+               - Some development tools
+            */
+
+            if (!origin) {
+                return callback(null, true);
+            }
+
+
+            /*
+               Check whether the browser's origin
+               is in our allowed list.
+            */
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+
+            /*
+               Reject unknown origins.
+            */
+
+            console.warn(
+                "GradeFlow CORS blocked origin:",
+                origin
+            );
+
+            return callback(
+                new Error("CORS origin not allowed.")
+            );
+        },
+
+
+        /*
+           HTTP methods used by GradeFlow.
+        */
+
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS"
+        ],
+
+
+        /*
+           Headers accepted by the backend.
+        */
+
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization"
+        ],
+
+
+        /*
+           Explicitly handle browser
+           preflight requests.
+        */
+
+        optionsSuccessStatus: 204
     })
 );
 
 
 /* ==========================================
-   JSON BODY PARSER
+   BODY
 ========================================== */
 
 app.use(
     express.json({
-        limit: "10mb"
+        limit: "50kb"
     })
 );
 
 
 /* ==========================================
-   URL-ENCODED BODY PARSER
+   GLOBAL RATE LIMIT
 ========================================== */
 
-app.use(
-    express.urlencoded({
-        extended: true,
-        limit: "10mb"
-    })
-);
+const globalLimiter =
+    rateLimit({
+        windowMs: 15 * 60 * 1000,
+
+        limit: 100,
+
+        standardHeaders: "draft-7",
+
+        legacyHeaders: false,
+
+        message: {
+            success: false,
+            message:
+                "Too many requests. Please try again later."
+        }
+    });
+
+
+app.use(globalLimiter);
 
 
 /* ==========================================
-   REQUEST LOGGER
+   AI RATE LIMIT
 ========================================== */
 
-app.use((req, res, next) => {
+const aiLimiter =
+    rateLimit({
+        windowMs: 60 * 1000,
 
-    const timestamp =
-        new Date().toISOString();
+        limit: 20,
 
-    console.log(
-        `[${timestamp}] ${req.method} ${req.originalUrl}`
-    );
+        standardHeaders: "draft-7",
 
-    next();
+        legacyHeaders: false,
 
-});
+        message: {
+            success: false,
+            message:
+                "Too many AI requests. Please wait."
+        }
+    });
 
 
 /* ==========================================
-   ROOT ROUTE
+   ROOT
 ========================================== */
 
 app.get("/", (req, res) => {
 
-    res.status(200).json({
-
+    res.json({
         success: true,
-
-        name:
-            "TrustNet API",
-
-        message:
-            "TrustNet backend is running.",
-
-        version:
-            "1.0.0",
-
-        status:
-            "online"
-
+        service: "GradeFlow Server",
+        status: "online"
     });
 
 });
 
 
 /* ==========================================
-   API INFORMATION
-========================================== */
-
-app.get("/api", (req, res) => {
-
-    res.status(200).json({
-
-        success: true,
-
-        name:
-            "TrustNet API",
-
-        version:
-            "1.0.0",
-
-        endpoints: {
-
-            health:
-                "/api/health",
-
-            firebase:
-                "/api/health/firebase",
-
-            auth:
-                "/api/auth",
-
-            users:
-                "/api/users",
-
-            trust:
-                "/api/trust",
-
-            ai:
-                "/api/ai"
-
-        }
-
-    });
-
-});
-
-
-/* ==========================================
-   GENERAL HEALTH CHECK
+   HEALTH
 ========================================== */
 
 app.get("/api/health", (req, res) => {
 
-    res.status(200).json({
-
+    res.json({
         success: true,
-
-        service:
-            "TrustNet Backend",
-
-        status:
-            "healthy",
-
-        timestamp:
-            new Date().toISOString()
-
+        status: "healthy",
+        service: "GradeFlow Server",
+        time: new Date().toISOString()
     });
 
 });
 
 
 /* ==========================================
-   FIREBASE CONNECTION TEST
-========================================== */
-
-app.get(
-    "/api/health/firebase",
-    async (req, res) => {
-
-        try {
-
-            const testDocument =
-                await adminDb
-                    .collection("_system")
-                    .doc("health")
-                    .get();
-
-
-            res.status(200).json({
-
-                success: true,
-
-                service:
-                    "Firebase Admin",
-
-                status:
-                    "connected",
-
-                firestore:
-                    testDocument.exists
-                        ? "reachable"
-                        : "reachable",
-
-                timestamp:
-                    new Date().toISOString()
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Firebase connection error:",
-                error
-            );
-
-
-            res.status(500).json({
-
-                success: false,
-
-                service:
-                    "Firebase Admin",
-
-                status:
-                    "error",
-
-                error:
-                    error.message
-
-            });
-
-        }
-
-    }
-);
-
-
-/* ==========================================
-   AUTHENTICATION ROUTES
+   AUTH ROUTES
 ========================================== */
 
 app.use(
@@ -264,85 +275,70 @@ app.use(
 
 
 /* ==========================================
-   FUTURE ROUTES
+   AI ROUTES
 ========================================== */
 
-/*
-User routes
-Trust routes
-AI routes
-Marketplace routes
-Business routes
-People routes
-Product routes
-Service routes
-Job routes
-Opportunity routes
-Information routes
-Message routes
-Community routes
-Social routes
-Decision routes
-AI Agent routes
-Profile routes
-Settings routes
-
-will be connected here after
-their individual files are created.
-*/
+app.use(
+    "/api/ai",
+    aiLimiter,
+    aiRoutes
+);
 
 
 /* ==========================================
-   404 ROUTE
+   404
 ========================================== */
 
 app.use((req, res) => {
 
     res.status(404).json({
-
         success: false,
-
-        error:
-            "Route not found.",
-
-        path:
-            req.originalUrl
-
+        message: "Endpoint not found."
     });
 
 });
 
 
 /* ==========================================
-   GLOBAL ERROR HANDLER
+   ERROR HANDLER
 ========================================== */
 
-app.use(
-    (err, req, res, next) => {
+app.use((error, req, res, next) => {
 
-        console.error(
-            "TrustNet Server Error:",
-            err
-        );
-
-
-        const statusCode =
-            err.statusCode || 500;
+    console.error(
+        "GradeFlow server error:",
+        error
+    );
 
 
-        res.status(statusCode).json({
+    /*
+       CORS error
+    */
 
+    if (
+        error?.message ===
+        "CORS origin not allowed."
+    ) {
+
+        return res.status(403).json({
             success: false,
-
-            error:
-                process.env.NODE_ENV === "production"
-                    ? "Internal server error."
-                    : err.message
-
+            message: "Origin not allowed."
         });
 
     }
-);
+
+
+    /*
+       General server error
+    */
+
+    res.status(500).json({
+        success: false,
+        message:
+            "An unexpected server error occurred."
+    });
+
+});
 
 
 /* ==========================================
@@ -351,79 +347,16 @@ app.use(
 
 app.listen(
     PORT,
+    "0.0.0.0",
     () => {
 
-        console.log("");
-
         console.log(
-            "=========================================="
+            `GradeFlow server running on port ${PORT}`
         );
 
         console.log(
-            "           TRUSTNET BACKEND"
+            `GradeFlow frontend: ${FRONTEND_URL || "Not configured"}`
         );
-
-        console.log(
-            "=========================================="
-        );
-
-        console.log("");
-
-        console.log(
-            `Server running on port ${PORT}`
-        );
-
-        console.log(
-            `Local: http://localhost:${PORT}`
-        );
-
-        console.log("");
-
-        console.log(
-            "API:"
-        );
-
-        console.log(
-            `http://localhost:${PORT}/api`
-        );
-
-        console.log("");
-
-        console.log(
-            "Health:"
-        );
-
-        console.log(
-            `http://localhost:${PORT}/api/health`
-        );
-
-        console.log("");
-
-        console.log(
-            "Firebase:"
-        );
-
-        console.log(
-            `http://localhost:${PORT}/api/health/firebase`
-        );
-
-        console.log("");
-
-        console.log(
-            "Authentication:"
-        );
-
-        console.log(
-            `http://localhost:${PORT}/api/auth`
-        );
-
-        console.log("");
-
-        console.log(
-            "=========================================="
-        );
-
-        console.log("");
 
     }
 );

@@ -1,69 +1,3 @@
-import express from "express";
-
-import authMiddleware from "../middleware/authMiddleware.js";
-
-import {
-assessTrust,
-getTrustAssessment
-} from "../services/trustService.js";
-
-const router = express.Router();
-
-/* ==========================================
-CREATE TRUST ASSESSMENT
-POST /api/trust/assess
-========================================== */
-
-router.post(
-"/assess",
-authMiddleware,
-async (req, res) => {
-try {
-const {
-category,
-subject,
-evidence,
-concerns
-} = req.body || {};
-
-        const assessment = await assessTrust({
-            uid: req.user.uid,
-            category,
-            subject,
-            evidence,
-            concerns
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Trust assessment created.",
-            assessment
-        });
-
-    } catch (error) {
-        if (
-            error.message.startsWith("Invalid ") ||
-            error.message.includes("required") ||
-            error.message.includes("must ") ||
-            error.message.includes("Each ")
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: error.message
-            });
-        }
-
-        console.error("Trust assessment error:", error);
-
-        return res.status(500).json({
-            success: false,
-            error: "Unable to create trust assessment."
-        });
-    }
-}
-
-);
-
 /* ==========================================
 GET A PRIVATE TRUST ASSESSMENT
 GET /api/trust/assess/
@@ -105,5 +39,3 @@ assessmentId: req.params.id
 }
 
 );
-
-export default router;

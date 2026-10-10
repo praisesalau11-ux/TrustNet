@@ -39,6 +39,7 @@ concerns
             message: "Trust assessment created.",
             assessment
         });
+
     } catch (error) {
         if (
             error.message.startsWith("Invalid ") ||
@@ -89,6 +90,7 @@ assessmentId: req.params.id
             success: true,
             assessment
         });
+
     } catch (error) {
         console.error("Get trust assessment error:", error);
 

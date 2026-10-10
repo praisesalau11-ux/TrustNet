@@ -8,7 +8,7 @@ import {
 
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-
+import trustRoutes from "./routes/trustRoutes.js";
 
 /* ==========================================
    TrustNet Backend
@@ -271,6 +271,16 @@ app.use(
 app.use(
     "/api/users",
     userRoutes
+);
+
+/* ==========================================
+   TRUST ROUTES
+========================================== */
+
+
+app.use(
+    "/api/trust",
+    trustRoutes
 );
 
 /* ==========================================

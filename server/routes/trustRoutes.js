@@ -92,7 +92,10 @@ assessmentId: req.params.id
         });
 
     } catch (error) {
-        console.error("Get trust assessment error:", error);
+        console.error(
+            "Get trust assessment error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,

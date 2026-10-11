@@ -1,9 +1,7 @@
-import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
-
 import {
     assessTrust,
-    getTrustAssessment
+    getTrustAssessment,
+    listTrustAssessments
 } from "../services/trustService.js";
 
 const router = express.Router();
@@ -60,7 +58,36 @@ router.post("/assess", authMiddleware, async (req, res) => {
 
 
 /* ==========================================
-   GET A PRIVATE TRUST ASSESSMENT
+   LIST THE SIGNED-IN USER'S ASSESSMENTS
+   GET /api/trust/assessments
+========================================== */
+
+router.get("/assessments", authMiddleware, async (req, res) => {
+    try {
+        const assessments = await listTrustAssessments({
+            uid: req.user.uid,
+            limit: req.query.limit
+        });
+
+        return res.status(200).json({
+            success: true,
+            count: assessments.length,
+            assessments
+        });
+
+    } catch (error) {
+        console.error("List trust assessments error:", error);
+
+        return res.status(500).json({
+            success: false,
+            error: "Unable to retrieve trust assessments."
+        });
+    }
+});
+
+
+/* ==========================================
+   GET ONE PRIVATE TRUST ASSESSMENT
    GET /api/trust/assess/:id
 ========================================== */
 

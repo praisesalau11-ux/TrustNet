@@ -1,3 +1,4 @@
+
 import express from "express";
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -442,6 +443,32 @@ router.patch(
             }
 
 
+            /*
+             * USERNAME PROTECTION
+             *
+             * Usernames must be changed through
+             * POST /api/users/username/claim.
+             */
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    incomingData,
+                    "username"
+                )
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    error:
+                        "Use the username reservation endpoint to change your username."
+
+                });
+
+            }
+
+
             const updateData = {};
 
 
@@ -497,24 +524,6 @@ router.patch(
 
                     error:
                         "Full name cannot be empty."
-
-                });
-
-            }
-
-
-            if (
-                "username" in updateData &&
-                typeof updateData.username === "string" &&
-                !updateData.username.trim()
-            ) {
-
-                return res.status(400).json({
-
-                    success: false,
-
-                    error:
-                        "Username cannot be empty."
 
                 });
 
@@ -616,18 +625,6 @@ router.patch(
     }
 );
 
-if (
-    Object.prototype.hasOwnProperty.call(
-        incomingData,
-        "username"
-    )
-) {
-    return res.status(400).json({
-        success: false,
-        error:
-            "Use the username reservation endpoint to change your username."
-    });
-}
 
 /* ==========================================
    EXPORT ROUTER

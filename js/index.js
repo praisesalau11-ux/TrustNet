@@ -1,227 +1,352 @@
+
+/* =========================================================
+   TRUSTNET 2.0 — LANDING PAGE JAVASCRIPT
+========================================================= */
+
 document.addEventListener("DOMContentLoaded", () => {
-initializeMobileMenu();
-initializeSmoothScrolling();
-initializeHeroVisual();
-initializeHeaderScroll();
-initializeNavigationState();
-});
 
-function initializeMobileMenu() {
-const menuButton = document.querySelector(".menu-button");
-const mobileNavigation = document.querySelector(".mobile-navigation");
+    "use strict";
 
-if (!menuButton || !mobileNavigation) {
-    return;
-}
 
-menuButton.addEventListener("click", () => {
-    const isOpen =
-        mobileNavigation.classList.contains("active");
+    /* =====================================================
+       1. ELEMENT REFERENCES
+    ===================================================== */
 
-    mobileNavigation.classList.toggle("active", !isOpen);
-    menuButton.classList.toggle("active", !isOpen);
-    menuButton.setAttribute(
-        "aria-expanded",
-        String(!isOpen)
+    const header = document.getElementById("siteHeader");
+
+    const menuButton = document.getElementById("menuButton");
+
+    const mobileNavigation = document.getElementById(
+        "mobileNavigation"
     );
-});
 
-const mobileLinks =
-    mobileNavigation.querySelectorAll("a");
 
-mobileLinks.forEach((link) => {
-    link.addEventListener("click", () => {
-        mobileNavigation.classList.remove("active");
-        menuButton.classList.remove("active");
-        menuButton.setAttribute(
-            "aria-expanded",
-            "false"
-        );
-    });
-});
+    /* =====================================================
+       2. MOBILE NAVIGATION
+    ===================================================== */
 
-document.addEventListener("click", (event) => {
-    if (
-        !mobileNavigation.contains(event.target) &&
-        !menuButton.contains(event.target)
-    ) {
-        mobileNavigation.classList.remove("active");
-        menuButton.classList.remove("active");
-        menuButton.setAttribute(
-            "aria-expanded",
-            "false"
-        );
-    }
-});
+    if (menuButton && mobileNavigation) {
 
-window.addEventListener("resize", () => {
-    if (window.innerWidth > 820) {
-        mobileNavigation.classList.remove("active");
-        menuButton.classList.remove("active");
-        menuButton.setAttribute(
-            "aria-expanded",
-            "false"
-        );
-    }
-});
+        const navigationLinks = mobileNavigation.querySelectorAll("a");
 
-}
 
-function initializeSmoothScrolling() {
-const links =
-document.querySelectorAll('a[href^="#"]');
+        function openMenu() {
 
-links.forEach((link) => {
-    link.addEventListener("click", (event) => {
-        const targetId =
-            link.getAttribute("href");
+            mobileNavigation.classList.add("active");
+            menuButton.classList.add("active");
 
-        if (
-            !targetId ||
-            targetId === "#" ||
-            targetId.length < 2
-        ) {
-            return;
+            menuButton.setAttribute("aria-expanded", "true");
+            menuButton.setAttribute("aria-label", "Close navigation");
+
+            mobileNavigation.setAttribute("aria-hidden", "false");
+
         }
 
-        const target =
-            document.querySelector(targetId);
 
-        if (!target) {
-            return;
+        function closeMenu() {
+
+            mobileNavigation.classList.remove("active");
+            menuButton.classList.remove("active");
+
+            menuButton.setAttribute("aria-expanded", "false");
+            menuButton.setAttribute("aria-label", "Open navigation");
+
+            mobileNavigation.setAttribute("aria-hidden", "true");
+
         }
 
-        event.preventDefault();
 
-        target.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
+        function toggleMenu() {
+
+            const isOpen = menuButton.getAttribute(
+                "aria-expanded"
+            ) === "true";
+
+            if (isOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+
+        }
+
+
+        menuButton.addEventListener("click", toggleMenu);
+
+
+        // Close menu after selecting a navigation link.
+
+        navigationLinks.forEach(link => {
+
+            link.addEventListener("click", () => {
+
+                closeMenu();
+
+            });
+
         });
 
-        window.history.replaceState(
-            null,
-            "",
-            targetId
-        );
+
+        // Close menu when Escape is pressed.
+
+        document.addEventListener("keydown", event => {
+
+            if (event.key === "Escape") {
+                closeMenu();
+            }
+
+        });
+
+
+        // Close menu when clicking outside it.
+
+        document.addEventListener("click", event => {
+
+            const clickedInsideMenu =
+                mobileNavigation.contains(event.target);
+
+            const clickedMenuButton =
+                menuButton.contains(event.target);
+
+            if (!clickedInsideMenu && !clickedMenuButton) {
+                closeMenu();
+            }
+
+        });
+
+
+        // Close menu when switching to desktop width.
+
+        window.addEventListener("resize", () => {
+
+            if (window.innerWidth > 760) {
+                closeMenu();
+            }
+
+        });
+
+    }
+
+
+    /* =====================================================
+       3. SMOOTH INTERNAL NAVIGATION
+    ===================================================== */
+
+    const internalLinks = document.querySelectorAll(
+        'a[href^="#"]'
+    );
+
+
+    internalLinks.forEach(link => {
+
+        link.addEventListener("click", event => {
+
+            const targetId = link.getAttribute("href");
+
+            if (!targetId || targetId === "#") {
+                return;
+            }
+
+            const target = document.querySelector(targetId);
+
+            if (!target) {
+                return;
+            }
+
+            event.preventDefault();
+
+            target.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+
+            // Keep the browser URL synchronized with the section.
+
+            if (history.replaceState) {
+
+                history.replaceState(
+                    null,
+                    "",
+                    targetId
+                );
+
+            }
+
+        });
+
     });
-});
 
-}
 
-function initializeHeroVisual() {
-const heroVisual =
-document.querySelector(".hero-visual");
+    /* =====================================================
+       4. HEADER SCROLL BEHAVIOR
+    ===================================================== */
 
-if (!heroVisual) {
-    return;
-}
+    if (header) {
 
-const prefersReducedMotion =
-    window.matchMedia(
+        let lastScrollPosition = 0;
+
+        function updateHeader() {
+
+            const currentScroll = window.scrollY;
+
+            if (currentScroll > 30) {
+
+                header.classList.add("scrolled");
+
+            } else {
+
+                header.classList.remove("scrolled");
+
+            }
+
+            lastScrollPosition = currentScroll;
+
+        }
+
+
+        window.addEventListener(
+            "scroll",
+            updateHeader,
+            { passive: true }
+        );
+
+        updateHeader();
+
+    }
+
+
+    /* =====================================================
+       5. ACTIVE NAVIGATION SECTION
+    ===================================================== */
+
+    const sections = document.querySelectorAll(
+        "main section[id]"
+    );
+
+    const desktopLinks = document.querySelectorAll(
+        ".main-navigation a"
+    );
+
+
+    if ("IntersectionObserver" in window && sections.length) {
+
+        const sectionObserver = new IntersectionObserver(
+            entries => {
+
+                entries.forEach(entry => {
+
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+
+                    const currentId = entry.target.id;
+
+                    desktopLinks.forEach(link => {
+
+                        const linkTarget = link.getAttribute("href");
+
+                        if (linkTarget === `#${currentId}`) {
+
+                            link.setAttribute(
+                                "aria-current",
+                                "location"
+                            );
+
+                        } else {
+
+                            link.removeAttribute("aria-current");
+
+                        }
+
+                    });
+
+                });
+
+            },
+            {
+                rootMargin: "-30% 0px -60% 0px",
+                threshold: 0
+            }
+        );
+
+
+        sections.forEach(section => {
+
+            sectionObserver.observe(section);
+
+        });
+
+    }
+
+
+    /* =====================================================
+       6. HERO VISUAL POINTER EFFECT
+    ===================================================== */
+
+    const heroVisual = document.querySelector(".hero-visual");
+
+    const reducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-const supportsPointer =
-    window.matchMedia(
-        "(pointer: fine)"
-    ).matches;
-
-if (prefersReducedMotion || !supportsPointer) {
-    return;
-}
-
-let animationFrame = null;
-
-heroVisual.addEventListener("mousemove", (event) => {
-    const rect =
-        heroVisual.getBoundingClientRect();
-
-    const x =
-        (event.clientX - rect.left) /
-        rect.width;
-
-    const y =
-        (event.clientY - rect.top) /
-        rect.height;
-
-    const rotateY =
-        (x - 0.5) * 8;
-
-    const rotateX =
-        (0.5 - y) * 8;
-
-    if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-    }
-
-    animationFrame =
-        requestAnimationFrame(() => {
-            heroVisual.style.transform =
-                `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
-});
-
-heroVisual.addEventListener("mouseleave", () => {
-    if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-    }
-
-    heroVisual.style.transform =
-        "perspective(1000px) rotateX(0deg) rotateY(0deg)";
-});
-
-}
-
-function initializeHeaderScroll() {
-const header =
-document.querySelector(".site-header");
-
-if (!header) {
-    return;
-}
-
-const updateHeader =
-    () => {
-        if (window.scrollY > 30) {
-            header.classList.add("scrolled");
-        } else {
-            header.classList.remove("scrolled");
-        }
-    };
-
-updateHeader();
-
-window.addEventListener(
-    "scroll",
-    updateHeader,
-    { passive: true }
-);
-
-}
-
-function initializeNavigationState() {
-const currentPath =
-window.location.pathname;
-
-const navigationLinks =
-    document.querySelectorAll(
-        ".main-navigation a, .mobile-navigation a"
     );
 
-navigationLinks.forEach((link) => {
-    const href =
-        link.getAttribute("href");
-
-    if (!href) {
-        return;
-    }
 
     if (
-        href.startsWith("/") &&
-        href === currentPath
+        heroVisual &&
+        window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
+        !reducedMotion.matches
     ) {
-        link.classList.add("active");
-    }
-});
 
-}
+        heroVisual.addEventListener("pointermove", event => {
+
+            const rect = heroVisual.getBoundingClientRect();
+
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            const rotateY = ((x - centerX) / centerX) * 3;
+            const rotateX = ((centerY - y) / centerY) * 3;
+
+            heroVisual.style.transform = `
+                perspective(1000px)
+                rotateX(${rotateX}deg)
+                rotateY(${rotateY}deg)
+            `;
+
+        });
+
+
+        heroVisual.addEventListener("pointerleave", () => {
+
+            heroVisual.style.transform = "";
+
+        });
+
+    }
+
+
+    /* =====================================================
+       7. FOOTER YEAR
+    ===================================================== */
+
+    const footerText = document.querySelector(
+        ".footer-inner > p"
+    );
+
+    if (footerText) {
+
+        footerText.textContent =
+            `© ${new Date().getFullYear()} TrustNet. Built for better-informed decisions.`;
+
+    }
+
+
+    /* =====================================================
+       8. INITIALIZATION
+    ===================================================== */
+
+    console.log("TrustNet landing page initialized.");
+
+});

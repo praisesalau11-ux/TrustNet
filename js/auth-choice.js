@@ -1,331 +1,156 @@
-import {
-auth,
-db,
-googleProvider
-} from "./firebase.js";
 
 import {
-signInWithPopup,
-onAuthStateChanged
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 import {
-doc,
-getDoc,
-setDoc,
-serverTimestamp
+    doc,
+    getDoc,
+    setDoc,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-
-const googleButton =
-    document.getElementById("googleSignUpButton");
-
-const authMessage =
-    document.getElementById("authMessage");
+import {
+    auth,
+    db,
+    googleProvider
+} from "./firebase.js";
 
 
-if (!googleButton) {
-    return;
-}
+const googleSignUpButton = document.getElementById(
+    "googleSignUpButton"
+);
+
+const authMessage = document.getElementById("authMessage");
 
 
 function showMessage(message, type = "info") {
-
-    if (!authMessage) {
-        return;
-    }
-
     authMessage.textContent = message;
-
-    authMessage.className =
-        "auth-message " + type;
+    authMessage.className = `auth-message show ${type}`;
 }
 
 
-function setButtonLoading(loading) {
-
-    googleButton.disabled = loading;
-
-    if (loading) {
-
-        googleButton.dataset.originalText =
-            googleButton.querySelector(".button-text")?.textContent ||
-            "Continue with Google";
-
-        const text =
-            googleButton.querySelector(".button-text");
-
-        if (text) {
-            text.textContent =
-                "Connecting to Google...";
-        }
-
-    } else {
-
-        const text =
-            googleButton.querySelector(".button-text");
-
-        if (text) {
-            text.textContent =
-                googleButton.dataset.originalText ||
-                "Continue with Google";
-        }
-    }
+function clearMessage() {
+    authMessage.textContent = "";
+    authMessage.className = "auth-message";
 }
 
 
-async function createUserDocument(user) {
+function setLoading(isLoading) {
+    googleSignUpButton.disabled = isLoading;
 
-    if (!user) {
-        return;
-    }
-
-    const userRef =
-        doc(db, "users", user.uid);
-
-    const userSnapshot =
-        await getDoc(userRef);
-
-
-    if (!userSnapshot.exists()) {
-
-        await setDoc(userRef, {
-
-            uid: user.uid,
-
-            fullName:
-                user.displayName || "",
-
-            username:
-                "",
-
-            email:
-                user.email || "",
-
-            phone:
-                user.phoneNumber || "",
-
-            photoURL:
-                user.photoURL || "",
-
-            provider:
-                "google",
-
-            country:
-                "",
-
-            gender:
-                "",
-
-            dateOfBirth:
-                "",
-
-            age:
-                null,
-
-            accountType:
-                "user",
-
-            verified:
-                true,
-
-            createdAt:
-                serverTimestamp(),
-
-            updatedAt:
-                serverTimestamp()
-
-        });
-
-    } else {
-
-        await setDoc(
-            userRef,
-            {
-                updatedAt:
-                    serverTimestamp()
-            },
-            {
-                merge: true
-            }
-        );
-    }
-}
-
-
-async function continueWithGoogle() {
-
-    setButtonLoading(true);
-
-    showMessage(
-        "Opening Google sign-in..."
+    const buttonText = googleSignUpButton.querySelector(
+        ".button-text"
     );
 
+    if (isLoading) {
+        buttonText.textContent = "Connecting to Google...";
+    } else {
+        buttonText.textContent = "Continue with Google";
+    }
+}
+
+
+function getFirebaseErrorMessage(error) {
+    switch (error.code) {
+        case "auth/popup-closed-by-user":
+            return "Google sign-in was cancelled. You can try again.";
+
+        case "auth/popup-blocked":
+            return "Your browser blocked the Google sign-in window. Allow popups and try again.";
+
+        case "auth/unauthorized-domain":
+            return "This website domain is not authorized in your Firebase Authentication settings.";
+
+        case "auth/network-request-failed":
+            return "Network error. Check your internet connection and try again.";
+
+        case "auth/account-exists-with-different-credential":
+            return "An account with this email already exists using another sign-in method. Log in using that method first.";
+
+        default:
+            return error.message || "Something went wrong. Please try again.";
+    }
+}
+
+
+async function handleGoogleSignUp() {
+    clearMessage();
+    setLoading(true);
 
     try {
+        googleProvider.setCustomParameters({
+            prompt: "select_account"
+        });
 
-        const result =
-            await signInWithPopup(
-                auth,
-                googleProvider
-            );
+        const result = await signInWithPopup(
+            auth,
+            googleProvider
+        );
 
-
-        const user =
-            result.user;
-
+        const user = result.user;
 
         if (!user) {
-            throw new Error(
-                "Google authentication did not return a user."
+            throw new Error("Firebase did not return a user account.");
+        }
+
+        const userRef = doc(db, "users", user.uid);
+
+        const userSnapshot = await getDoc(userRef);
+
+        if (!userSnapshot.exists()) {
+            const newProfile = {
+                uid: user.uid,
+                fullName: user.displayName || "",
+                email: user.email || "",
+                photoURL: user.photoURL || "",
+                username: "",
+                country: "",
+                phone: "",
+                bio: "",
+                profileComplete: false,
+                accountProvider: "google",
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+
+            await setDoc(userRef, newProfile);
+
+        } else {
+            await setDoc(
+                userRef,
+                {
+                    email: user.email || "",
+                    photoURL: user.photoURL || "",
+                    lastLoginAt: serverTimestamp()
+                },
+                {
+                    merge: true
+                }
             );
         }
 
-
-        await createUserDocument(user);
-
-
         showMessage(
-            "Account created successfully. Redirecting..."
+            "Google authentication successful. Redirecting...",
+            "success"
         );
 
-
-        setTimeout(() => {
-
-            window.location.href =
-                "/dashboard.html";
-
-        }, 700);
-
+        window.location.replace("/dashboard.html");
 
     } catch (error) {
-
-        console.error(
-            "TrustNet Google sign-up error:",
-            error
-        );
-
-
-        let message =
-            "Unable to create your account. Please try again.";
-
-
-        if (
-            error.code ===
-            "auth/popup-closed-by-user"
-        ) {
-
-            message =
-                "Google sign-in was cancelled.";
-
-        } else if (
-            error.code ===
-            "auth/popup-blocked"
-        ) {
-
-            message =
-                "Your browser blocked the Google sign-in popup. Please allow popups and try again.";
-
-        } else if (
-            error.code ===
-            "auth/cancelled-popup-request"
-        ) {
-
-            message =
-                "Another Google sign-in window is already open.";
-
-        } else if (
-            error.code ===
-            "auth/network-request-failed"
-        ) {
-
-            message =
-                "Network error. Check your internet connection and try again.";
-
-        } else if (
-            error.code ===
-            "auth/operation-not-allowed"
-        ) {
-
-            message =
-                "Google sign-in is not enabled in Firebase Authentication.";
-
-        } else if (
-            error.code ===
-            "auth/unauthorized-domain"
-        ) {
-
-            message =
-                "This website domain is not authorized in Firebase Authentication.";
-
-        } else if (
-            error.code ===
-            "permission-denied"
-        ) {
-
-            message =
-                "Your account was authenticated, but TrustNet could not save your profile. Check Firestore rules.";
-
-        } else if (error.message) {
-
-            message =
-                error.message;
-        }
-
+        console.error("TrustNet Google authentication error:", error);
 
         showMessage(
-            message,
+            getFirebaseErrorMessage(error),
             "error"
         );
 
-    } finally {
-
-        setButtonLoading(false);
+        setLoading(false);
     }
 }
 
 
-googleButton.addEventListener(
+googleSignUpButton.addEventListener(
     "click",
-    continueWithGoogle
+    handleGoogleSignUp
 );
-
-
-onAuthStateChanged(
-    auth,
-    async (user) => {
-
-        if (!user) {
-            return;
-        }
-
-
-        const currentPath =
-            window.location.pathname;
-
-
-        if (
-            currentPath.endsWith(
-                "/auth-choice.html"
-            )
-        ) {
-
-            try {
-
-                await createUserDocument(
-                    user
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Unable to sync authenticated user:",
-                    error
-                );
-            }
-        }
-    }
-);
-
-});

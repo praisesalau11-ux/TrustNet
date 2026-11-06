@@ -1,1220 +1,343 @@
+
 /* ==========================================
-   TrustNet
+   TRUSTNET LOGIN
    File: js/login.js
-
-   Login Authentication
-========================================== */
-
-
-/* ==========================================
-   FIREBASE IMPORTS
+   Firebase SDK: 12.1.0
 ========================================== */
 
 import {
-    auth,
-    googleProvider
-} from "./firebase.js";
-
-
-/* ==========================================
-   FIREBASE AUTH FUNCTIONS
-========================================== */
-
-import {
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    sendPasswordResetEmail,
-    onAuthStateChanged
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-/* ==========================================
-   TRUSTNET BACKEND
-========================================== */
+import {
+  auth,
+  db,
+  googleProvider
+} from "./firebase.js";
 
-const BACKEND_URL =
-    "https://trustnet-j9oq.onrender.com";
+// ==========================================
+// ELEMENTS
+// ==========================================
 
+const loginForm = document.getElementById("loginForm");
 
-/* ==========================================
-   LOGIN REDIRECT CONTROL
-========================================== */
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
 
-let isLoggingIn = false;
+const loginButton = document.getElementById("loginButton");
+const googleLoginButton = document.getElementById("googleLoginButton");
 
+const forgotPasswordButton =
+  document.getElementById("forgotPasswordButton");
 
-/* ==========================================
-   CONNECT FIREBASE USER TO TRUSTNET BACKEND
-========================================== */
+const togglePasswordButton =
+  document.getElementById("togglePassword");
 
-async function authenticateWithBackend(user) {
+const messageBox = document.getElementById("loginMessage");
 
-    /* ======================================
-       CHECK USER
-    ======================================= */
+let isSubmitting = false;
 
-    if (!user) {
+// ==========================================
+// MESSAGE HANDLING
+// ==========================================
 
-        throw new Error(
-            "No authenticated Firebase user was found."
-        );
-
-    }
-
-
-    /* ======================================
-       GET FRESH FIREBASE ID TOKEN
-    ======================================= */
-
-    const idToken =
-        await user.getIdToken(true);
-
-
-    /* ======================================
-       SEND TOKEN TO TRUSTNET BACKEND
-    ======================================= */
-
-    const response =
-        await fetch(
-            `${BACKEND_URL}/api/auth/me`,
-            {
-                method: "GET",
-
-                headers: {
-                    "Authorization":
-                        `Bearer ${idToken}`,
-
-                    "Content-Type":
-                        "application/json"
-                }
-            }
-        );
-
-
-    /* ======================================
-       READ BACKEND RESPONSE
-    ======================================= */
-
-    let data = null;
-
-    try {
-
-        data =
-            await response.json();
-
-    } catch (error) {
-
-        console.error(
-            "TrustNet Backend JSON Error:",
-            error
-        );
-
-    }
-
-
-    /* ======================================
-       CHECK BACKEND RESPONSE
-    ======================================= */
-
-    if (!response.ok) {
-
-        throw new Error(
-            data?.error ||
-            "TrustNet backend authentication failed."
-        );
-
-    }
-
-
-    /* ======================================
-       CHECK SUCCESS
-    ======================================= */
-
-    if (
-        !data ||
-        data.success !== true
-    ) {
-
-        throw new Error(
-            data?.error ||
-            "TrustNet backend could not authenticate the user."
-        );
-
-    }
-
-
-    /* ======================================
-       SAVE AUTHENTICATED USER DATA
-    ======================================= */
-
-    sessionStorage.setItem(
-        "trustnetAuthenticated",
-        "true"
-    );
-
-
-    sessionStorage.setItem(
-        "trustnetUser",
-        JSON.stringify(
-            data.user
-        )
-    );
-
-
-    /* ======================================
-       RETURN BACKEND DATA
-    ======================================= */
-
-    return data;
+function showMessage(message, type = "error") {
+  messageBox.textContent = message;
+  messageBox.className = `login-message ${type}`;
 }
 
+function clearMessage() {
+  messageBox.textContent = "";
+  messageBox.className = "login-message";
+}
 
-/* ==========================================
-   DOM READY
-========================================== */
+// ==========================================
+// BUTTON STATE
+// ==========================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
+function setLoading(loading, message = "Please wait...") {
+  isSubmitting = loading;
 
+  loginButton.disabled = loading;
+  googleLoginButton.disabled = loading;
+  forgotPasswordButton.disabled = loading;
 
-        /* ======================================
-           ELEMENTS
-        ======================================= */
+  loginButton.textContent = loading ? message : "Log in";
 
-        const loginForm =
-            document.getElementById(
-                "loginForm"
-            );
+  googleLoginButton.querySelector("span").textContent =
+    loading ? "Please wait..." : "Continue with Google";
+}
 
+// ==========================================
+// FIREBASE ERROR HANDLING
+// ==========================================
 
-        const emailInput =
-            document.getElementById(
-                "email"
-            );
+function getLoginErrorMessage(error) {
+  switch (error.code) {
+    case "auth/invalid-email":
+      return "Enter a valid email address.";
 
+    case "auth/user-not-found":
+    case "auth/invalid-credential":
+      return "Incorrect email or password.";
 
-        const passwordInput =
-            document.getElementById(
-                "password"
-            );
+    case "auth/wrong-password":
+      return "Incorrect email or password.";
+
+    case "auth/user-disabled":
+      return "This account has been disabled. Contact support.";
 
+    case "auth/too-many-requests":
+      return "Too many login attempts. Please try again later.";
 
-        const passwordToggle =
-            document.getElementById(
-                "passwordToggle"
-            );
+    case "auth/network-request-failed":
+      return "Network error. Check your internet connection.";
 
+    case "auth/popup-closed-by-user":
+      return "Google sign-in was cancelled.";
 
-        const rememberMe =
-            document.getElementById(
-                "rememberMe"
-            );
+    case "auth/popup-blocked":
+      return "Your browser blocked the Google sign-in popup.";
 
+    case "auth/unauthorized-domain":
+      return "This domain is not authorized in Firebase Authentication.";
 
-        const forgotPassword =
-            document.getElementById(
-                "forgotPassword"
-            );
+    case "auth/account-exists-with-different-credential":
+      return "An account already exists with this email using another sign-in method.";
 
+    case "permission-denied":
+    case "firestore/permission-denied":
+      return "TrustNet could not access your profile. Check your Firestore security rules.";
 
-        const loginButton =
-            document.getElementById(
-                "loginButton"
-            );
+    default:
+      return error.message || "Login failed. Please try again.";
+  }
+}
 
+// ==========================================
+// PROFILE CHECK AND ROUTING
+// ==========================================
 
-        const googleLoginButton =
-            document.getElementById(
-                "googleLoginButton"
-            );
+async function getLoginDestination(user) {
+  const userRef = doc(db, "users", user.uid);
+  const userSnapshot = await getDoc(userRef);
 
+  // Create a minimal profile if an authenticated
+  // account does not yet have a Firestore user document.
+  if (!userSnapshot.exists()) {
+    await setDoc(userRef, {
+      uid: user.uid,
+      fullName: user.displayName || "",
+      username: "",
+      photoURL: user.photoURL || null,
+      email: user.email || "",
+      profileComplete: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
 
-        const loginMessage =
-            document.getElementById(
-                "loginMessage"
-            );
+    return "/complete-profile.html";
+  }
 
+  const profile = userSnapshot.data();
 
-        const emailError =
-            document.getElementById(
-                "emailError"
-            );
+  // Incomplete profiles must finish setup first.
+  if (profile.profileComplete !== true) {
+    return "/complete-profile.html";
+  }
 
+  return "/dashboard.html";
+}
 
-        const passwordError =
-            document.getElementById(
-                "passwordError"
-            );
+// ==========================================
+// EMAIL LOGIN
+// ==========================================
 
+async function loginWithEmail(event) {
+  event.preventDefault();
 
-        /* ======================================
-           CHECK REQUIRED ELEMENTS
-        ======================================= */
+  if (isSubmitting) return;
 
-        if (
-            !loginForm ||
-            !emailInput ||
-            !passwordInput ||
-            !loginButton
-        ) {
+  clearMessage();
 
-            console.error(
-                "TrustNet Login: Required elements are missing."
-            );
+  const email = emailInput.value.trim().toLowerCase();
+  const password = passwordInput.value;
 
-            return;
-        }
+  if (!email || !emailInput.validity.valid) {
+    showMessage("Enter a valid email address.");
+    emailInput.focus();
+    return;
+  }
 
+  if (!password) {
+    showMessage("Enter your password.");
+    passwordInput.focus();
+    return;
+  }
 
-        /* ======================================
-           MESSAGE HELPER
-        ======================================= */
+  try {
+    setLoading(true, "Logging in...");
 
-        function showMessage(
-            message,
-            type = "error"
-        ) {
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
-            if (!loginMessage) {
-                return;
-            }
+    const user = credential.user;
 
-            loginMessage.textContent =
-                message;
+    const destination = await getLoginDestination(user);
 
-            loginMessage.className =
-                `login-message show ${type}`;
-        }
+    showMessage("Login successful. Redirecting...", "success");
 
+    window.location.href = destination;
 
-        /* ======================================
-           CLEAR MESSAGE
-        ======================================= */
+  } catch (error) {
+    console.error("TrustNet email login error:", error);
 
-        function clearMessage() {
+    showMessage(getLoginErrorMessage(error));
 
-            if (!loginMessage) {
-                return;
-            }
+    setLoading(false);
+  }
+}
 
-            loginMessage.textContent =
-                "";
+// ==========================================
+// GOOGLE LOGIN
+// ==========================================
 
-            loginMessage.className =
-                "login-message";
-        }
+async function loginWithGoogle() {
+  if (isSubmitting) return;
 
+  clearMessage();
 
-        /* ======================================
-           CLEAR FIELD ERRORS
-        ======================================= */
+  try {
+    setLoading(true, "Connecting...");
 
-        function clearErrors() {
+    googleProvider.setCustomParameters({
+      prompt: "select_account"
+    });
 
-            if (emailError) {
+    const credential = await signInWithPopup(
+      auth,
+      googleProvider
+    );
 
-                emailError.textContent =
-                    "";
-            }
+    const user = credential.user;
 
+    const destination = await getLoginDestination(user);
 
-            if (passwordError) {
+    showMessage("Google login successful. Redirecting...", "success");
 
-                passwordError.textContent =
-                    "";
-            }
+    window.location.href = destination;
 
+  } catch (error) {
+    console.error("TrustNet Google login error:", error);
 
-            emailInput.classList.remove(
-                "input-error"
-            );
+    showMessage(getLoginErrorMessage(error));
 
+    setLoading(false);
+  }
+}
 
-            passwordInput.classList.remove(
-                "input-error"
-            );
-        }
+// ==========================================
+// PASSWORD RESET
+// ==========================================
 
+async function resetPassword() {
+  if (isSubmitting) return;
 
-        /* ======================================
-           EMAIL VALIDATION
-        ======================================= */
+  clearMessage();
 
-        function isValidEmail(email) {
+  const email = emailInput.value.trim().toLowerCase();
 
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                .test(email);
+  if (!email || !emailInput.validity.valid) {
+    showMessage(
+      "Enter your registered email address in the email field first."
+    );
 
-        }
+    emailInput.focus();
+    return;
+  }
 
+  try {
+    forgotPasswordButton.disabled = true;
+    forgotPasswordButton.textContent = "Sending...";
 
-        /* ======================================
-           PASSWORD VISIBILITY
-        ======================================= */
+    await sendPasswordResetEmail(auth, email);
 
-        if (passwordToggle) {
+    showMessage(
+      "If an account exists for this email, a password reset email will be sent. Check your inbox and spam folder.",
+      "success"
+    );
 
-            passwordToggle.addEventListener(
-                "click",
-                () => {
+  } catch (error) {
+    console.error("TrustNet password reset error:", error);
 
-                    const isPassword =
-                        passwordInput.type ===
-                        "password";
-
-
-                    passwordInput.type =
-                        isPassword
-                            ? "text"
-                            : "password";
-
-
-                    passwordToggle.textContent =
-                        isPassword
-                            ? "Hide"
-                            : "Show";
-
-
-                    passwordToggle.setAttribute(
-                        "aria-label",
-                        isPassword
-                            ? "Hide password"
-                            : "Show password"
-                    );
-
-                }
-            );
-        }
-
-
-        /* ======================================
-           REMEMBER ME
-        ======================================= */
-
-        if (rememberMe) {
-
-            const savedEmail =
-                localStorage.getItem(
-                    "trustnetRememberedEmail"
-                );
-
-
-            if (savedEmail) {
-
-                emailInput.value =
-                    savedEmail;
-
-                rememberMe.checked =
-                    true;
-            }
-
-
-            rememberMe.addEventListener(
-                "change",
-                () => {
-
-                    if (
-                        rememberMe.checked &&
-                        emailInput.value.trim()
-                    ) {
-
-                        localStorage.setItem(
-                            "trustnetRememberedEmail",
-                            emailInput.value.trim()
-                        );
-
-                    } else {
-
-                        localStorage.removeItem(
-                            "trustnetRememberedEmail"
-                        );
-
-                    }
-
-                }
-            );
-        }
-
-
-        /* ======================================
-           EMAIL/PASSWORD LOGIN
-        ======================================= */
-
-        loginForm.addEventListener(
-            "submit",
-            async (event) => {
-
-                event.preventDefault();
-
-
-                clearErrors();
-
-                clearMessage();
-
-
-                const email =
-                    emailInput.value.trim();
-
-
-                const password =
-                    passwordInput.value;
-
-
-                /* ==================================
-                   VALIDATION
-                ================================== */
-
-                let valid = true;
-
-
-                if (!email) {
-
-                    if (emailError) {
-
-                        emailError.textContent =
-                            "Enter your email address.";
-                    }
-
-
-                    emailInput.classList.add(
-                        "input-error"
-                    );
-
-
-                    valid = false;
-
-
-                } else if (
-                    !isValidEmail(email)
-                ) {
-
-                    if (emailError) {
-
-                        emailError.textContent =
-                            "Enter a valid email address.";
-                    }
-
-
-                    emailInput.classList.add(
-                        "input-error"
-                    );
-
-
-                    valid = false;
-                }
-
-
-                if (!password) {
-
-                    if (passwordError) {
-
-                        passwordError.textContent =
-                            "Enter your password.";
-                    }
-
-
-                    passwordInput.classList.add(
-                        "input-error"
-                    );
-
-
-                    valid = false;
-                }
-
-
-                if (!valid) {
-
-                    return;
-                }
-
-
-                /* ==================================
-                   REMEMBER EMAIL
-                ================================== */
-
-                if (
-                    rememberMe &&
-                    rememberMe.checked
-                ) {
-
-                    localStorage.setItem(
-                        "trustnetRememberedEmail",
-                        email
-                    );
-
-                } else {
-
-                    localStorage.removeItem(
-                        "trustnetRememberedEmail"
-                    );
-                }
-
-
-                /* ==================================
-                   LOADING STATE
-                ================================== */
-
-                loginButton.disabled =
-                    true;
-
-
-                const buttonText =
-                    loginButton.querySelector(
-                        ".button-text"
-                    );
-
-
-                const buttonArrow =
-                    loginButton.querySelector(
-                        ".button-arrow"
-                    );
-
-
-                if (buttonText) {
-
-                    buttonText.textContent =
-                        "Logging in...";
-                }
-
-
-                if (buttonArrow) {
-
-                    buttonArrow.textContent =
-                        "";
-                }
-
-
-                /* ==================================
-                   PREVENT AUTH STATE REDIRECT
-                   WHILE LOGIN IS PROCESSING
-                ================================== */
-
-                isLoggingIn =
-                    true;
-
-
-                /* ==================================
-                   FIREBASE LOGIN
-                ================================== */
-
-                try {
-
-                    const credential =
-                        await signInWithEmailAndPassword(
-                            auth,
-                            email,
-                            password
-                        );
-
-
-                    const user =
-                        credential.user;
-
-
-                    /* ==============================
-                       CONNECT TO BACKEND
-                    ============================== */
-
-                    showMessage(
-                        "Verifying your TrustNet account...",
-                        "success"
-                    );
-
-
-                    await authenticateWithBackend(
-                        user
-                    );
-
-
-                    /* ==============================
-                       LOGIN COMPLETE
-                    ============================== */
-
-                    showMessage(
-                        "Login successful. Redirecting...",
-                        "success"
-                    );
-
-
-                    setTimeout(
-                        () => {
-
-                            window.location.href =
-                                "/dashboard.html";
-
-                        },
-                        500
-                    );
-
-
-                } catch (error) {
-
-                    console.error(
-                        "TrustNet Login Error:",
-                        error
-                    );
-
-
-                    let message =
-                        "Unable to log in. Please try again.";
-
-
-                    /* ==============================
-                       FIREBASE ERRORS
-                    ============================== */
-
-                    switch (
-                        error.code
-                    ) {
-
-                        case "auth/invalid-credential":
-
-                        case "auth/wrong-password":
-
-                        case "auth/user-not-found":
-
-                            message =
-                                "Incorrect email or password.";
-
-                            break;
-
-
-                        case "auth/invalid-email":
-
-                            message =
-                                "Please enter a valid email address.";
-
-                            break;
-
-
-                        case "auth/user-disabled":
-
-                            message =
-                                "This account has been disabled.";
-
-                            break;
-
-
-                        case "auth/too-many-requests":
-
-                            message =
-                                "Too many login attempts. Please wait and try again later.";
-
-                            break;
-
-
-                        case "auth/network-request-failed":
-
-                            message =
-                                "Network error. Check your internet connection.";
-
-                            break;
-
-
-                        default:
-
-                            /* ==========================
-                               BACKEND ERROR
-                            ========================== */
-
-                            if (
-                                error.message &&
-                                error.message.includes(
-                                    "TrustNet backend"
-                                )
-                            ) {
-
-                                message =
-                                    "Your Firebase login succeeded, but TrustNet could not verify your account with the backend. Please try again.";
-
-                            } else {
-
-                                message =
-                                    error.message ||
-                                    message;
-                            }
-
-                            break;
-                    }
-
-
-                    showMessage(
-                        message,
-                        "error"
-                    );
-
-
-                } finally {
-
-                    loginButton.disabled =
-                        false;
-
-
-                    if (buttonText) {
-
-                        buttonText.textContent =
-                            "Log in";
-                    }
-
-
-                    if (buttonArrow) {
-
-                        buttonArrow.textContent =
-                            "→";
-                    }
-
-
-                    isLoggingIn =
-                        false;
-                }
-
-            }
-        );
-
-
-        /* ======================================
-           GOOGLE SIGN-IN
-        ======================================= */
-
-        if (googleLoginButton) {
-
-            googleLoginButton.addEventListener(
-                "click",
-                async () => {
-
-                    clearErrors();
-
-                    clearMessage();
-
-
-                    googleLoginButton.disabled =
-                        true;
-
-
-                    const originalText =
-                        googleLoginButton.innerHTML;
-
-
-                    googleLoginButton.innerHTML =
-                        `
-                        <span class="google-icon">
-                            G
-                        </span>
-                        <span>
-                            Connecting...
-                        </span>
-                        `;
-
-
-                    isLoggingIn =
-                        true;
-
-
-                    try {
-
-                        /* ==========================
-                           FIREBASE GOOGLE LOGIN
-                        ========================== */
-
-                        const result =
-                            await signInWithPopup(
-                                auth,
-                                googleProvider
-                            );
-
-
-                        const user =
-                            result.user;
-
-
-                        /* ==========================
-                           CONNECT TO BACKEND
-                        ========================== */
-
-                        showMessage(
-                            "Verifying your TrustNet account...",
-                            "success"
-                        );
-
-
-                        await authenticateWithBackend(
-                            user
-                        );
-
-
-                        /* ==========================
-                           LOGIN COMPLETE
-                        ========================== */
-
-                        showMessage(
-                            "Google sign-in successful. Redirecting...",
-                            "success"
-                        );
-
-
-                        setTimeout(
-                            () => {
-
-                                window.location.href =
-                                    "/dashboard.html";
-
-                            },
-                            500
-                        );
-
-
-                    } catch (error) {
-
-                        console.error(
-                            "TrustNet Google Login Error:",
-                            error
-                        );
-
-
-                        if (
-                            error.code ===
-                            "auth/popup-closed-by-user"
-                        ) {
-
-                            showMessage(
-                                "Google sign-in was cancelled.",
-                                "error"
-                            );
-
-
-                        } else if (
-                            error.code ===
-                            "auth/popup-blocked"
-                        ) {
-
-                            showMessage(
-                                "Your browser blocked the Google sign-in window. Please allow popups for TrustNet.",
-                                "error"
-                            );
-
-
-                        } else if (
-                            error.code ===
-                            "auth/account-exists-with-different-credential"
-                        ) {
-
-                            showMessage(
-                                "An account already exists with this email using another sign-in method.",
-                                "error"
-                            );
-
-
-                        } else if (
-                            error.message &&
-                            error.message.includes(
-                                "TrustNet backend"
-                            )
-                        ) {
-
-                            showMessage(
-                                "Google sign-in succeeded, but TrustNet could not verify your account with the backend.",
-                                "error"
-                            );
-
-
-                        } else {
-
-                            showMessage(
-                                error.message ||
-                                "Google sign-in failed. Please try again.",
-                                "error"
-                            );
-
-                        }
-
-
-                    } finally {
-
-                        googleLoginButton.disabled =
-                            false;
-
-
-                        googleLoginButton.innerHTML =
-                            originalText;
-
-
-                        isLoggingIn =
-                            false;
-                    }
-
-                }
-            );
-        }
-
-
-        /* ======================================
-           FORGOT PASSWORD
-        ======================================= */
-
-        if (forgotPassword) {
-
-            forgotPassword.addEventListener(
-                "click",
-                async (event) => {
-
-                    event.preventDefault();
-
-
-                    clearErrors();
-
-                    clearMessage();
-
-
-                    const email =
-                        emailInput.value.trim();
-
-
-                    if (!email) {
-
-                        if (emailError) {
-
-                            emailError.textContent =
-                                "Enter your email first.";
-                        }
-
-
-                        emailInput.focus();
-
-
-                        return;
-                    }
-
-
-                    if (
-                        !isValidEmail(email)
-                    ) {
-
-                        if (emailError) {
-
-                            emailError.textContent =
-                                "Enter a valid email address.";
-                        }
-
-
-                        emailInput.focus();
-
-
-                        return;
-                    }
-
-
-                    forgotPassword.textContent =
-                        "Sending...";
-
-
-                    forgotPassword.style.pointerEvents =
-                        "none";
-
-
-                    try {
-
-                        await sendPasswordResetEmail(
-                            auth,
-                            email
-                        );
-
-
-                        showMessage(
-                            "Password reset email sent. Check your inbox and follow the instructions.",
-                            "success"
-                        );
-
-
-                    } catch (error) {
-
-                        console.error(
-                            "TrustNet Password Reset Error:",
-                            error
-                        );
-
-
-                        let message =
-                            "Unable to send the password reset email.";
-
-
-                        switch (
-                            error.code
-                        ) {
-
-                            case "auth/user-not-found":
-
-                                message =
-                                    "No TrustNet account was found with this email.";
-
-                                break;
-
-
-                            case "auth/invalid-email":
-
-                                message =
-                                    "Please enter a valid email address.";
-
-                                break;
-
-
-                            case "auth/too-many-requests":
-
-                                message =
-                                    "Too many requests. Please wait before trying again.";
-
-                                break;
-
-
-                            case "auth/network-request-failed":
-
-                                message =
-                                    "Network error. Check your internet connection.";
-
-                                break;
-
-
-                            default:
-
-                                message =
-                                    error.message ||
-                                    message;
-                        }
-
-
-                        showMessage(
-                            message,
-                            "error"
-                        );
-
-                    } finally {
-
-                        forgotPassword.textContent =
-                            "Forgot password?";
-
-
-                        forgotPassword.style.pointerEvents =
-                            "";
-                    }
-
-                }
-            );
-        }
-
-
-        /* ======================================
-           AUTH STATE CHECK
-           
-           Redirect users who are already
-           signed in.
-
-           During a new login we wait until
-           backend verification finishes.
-        ======================================= */
-
-        onAuthStateChanged(
-            auth,
-            (user) => {
-
-                if (
-                    user &&
-                    !isLoggingIn
-                ) {
-
-                    console.log(
-                        "TrustNet: User already signed in."
-                    );
-
-
-                    window.location.href =
-                        "/dashboard.html";
-                }
-
-            }
-        );
-
-
-        /* ======================================
-           EMAIL INPUT
-        ======================================= */
-
-        emailInput.addEventListener(
-            "input",
-            () => {
-
-                if (emailError) {
-
-                    emailError.textContent =
-                        "";
-                }
-
-
-                emailInput.classList.remove(
-                    "input-error"
-                );
-
-
-                if (
-                    loginMessage &&
-                    loginMessage.classList.contains(
-                        "error"
-                    )
-                ) {
-
-                    clearMessage();
-                }
-
-            }
-        );
-
-
-        /* ======================================
-           PASSWORD INPUT
-        ======================================= */
-
-        passwordInput.addEventListener(
-            "input",
-            () => {
-
-                if (passwordError) {
-
-                    passwordError.textContent =
-                        "";
-                }
-
-
-                passwordInput.classList.remove(
-                    "input-error"
-                );
-
-
-                if (
-                    loginMessage &&
-                    loginMessage.classList.contains(
-                        "error"
-                    )
-                ) {
-
-                    clearMessage();
-                }
-
-            }
-        );
-
-
-        /* ======================================
-           INITIAL LOG
-        ======================================= */
-
-        console.log(
-            "TRUSTNET LOGIN JS LOADED"
-        );
-
-
-        console.log(
-            "TrustNet Backend:",
-            BACKEND_URL
-        );
-
+    if (
+      error.code === "auth/user-not-found" ||
+      error.code === "auth/invalid-credential"
+    ) {
+      showMessage(
+        "If an account exists for this email, a password reset email will be sent. Check your inbox and spam folder.",
+        "success"
+      );
+    } else {
+      showMessage(getLoginErrorMessage(error));
     }
+
+  } finally {
+    forgotPasswordButton.disabled = false;
+    forgotPasswordButton.textContent = "Forgot password?";
+  }
+}
+
+// ==========================================
+// PASSWORD VISIBILITY
+// ==========================================
+
+function togglePasswordVisibility() {
+  const shouldShow = passwordInput.type === "password";
+
+  passwordInput.type = shouldShow ? "text" : "password";
+
+  togglePasswordButton.textContent =
+    shouldShow ? "Hide" : "Show";
+
+  togglePasswordButton.setAttribute(
+    "aria-label",
+    shouldShow ? "Hide password" : "Show password"
+  );
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+
+loginForm.addEventListener("submit", loginWithEmail);
+
+googleLoginButton.addEventListener("click", loginWithGoogle);
+
+forgotPasswordButton.addEventListener("click", resetPassword);
+
+togglePasswordButton.addEventListener(
+  "click",
+  togglePasswordVisibility
 );
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+
+document.getElementById("currentYear").textContent =
+  new Date().getFullYear();
+
+console.log("TrustNet login initialized.");

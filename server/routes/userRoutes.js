@@ -25,7 +25,6 @@ const router =
 const allowedUpdateFields = [
 
     "fullName",
-    "username",
     "gender",
     "dateOfBirth",
     "country",
@@ -35,6 +34,161 @@ const allowedUpdateFields = [
     "bio"
 
 ];
+
+
+/* ==========================================
+   CLAIM UNIQUE USERNAME
+   POST /api/users/username/claim
+
+   Uses a Firestore transaction so two
+   accounts cannot claim the same username.
+========================================== */
+
+router.post(
+    "/username/claim",
+    authMiddleware,
+    async (req, res) => {
+
+        try {
+            const uid = req.user.uid;
+
+            const username = String(
+                req.body?.username || ""
+            ).trim().toLowerCase();
+
+            const usernamePattern = /^[a-z0-9_]{3,20}$/;
+
+            if (!usernamePattern.test(username)) {
+                return res.status(400).json({
+                    success: false,
+                    error:
+                        "Username must be 3–20 characters and contain only letters, numbers or underscores."
+                });
+            }
+
+            const userRef = adminDb
+                .collection("users")
+                .doc(uid);
+
+            const newUsernameRef = adminDb
+                .collection("usernameRegistry")
+                .doc(username);
+
+            const result = await adminDb.runTransaction(
+                async (transaction) => {
+
+                    // Read the user's existing profile.
+                    const userSnapshot =
+                        await transaction.get(userRef);
+
+                    const existingUsername = userSnapshot.exists
+                        ? String(
+                            userSnapshot.data().username || ""
+                        ).trim().toLowerCase()
+                        : "";
+
+                    // Read the requested username reservation.
+                    const newUsernameSnapshot =
+                        await transaction.get(newUsernameRef);
+
+                    // Read the old reservation if the username changes.
+                    let oldUsernameRef = null;
+                    let oldUsernameSnapshot = null;
+
+                    if (
+                        existingUsername &&
+                        existingUsername !== username
+                    ) {
+                        oldUsernameRef = adminDb
+                            .collection("usernameRegistry")
+                            .doc(existingUsername);
+
+                        oldUsernameSnapshot =
+                            await transaction.get(oldUsernameRef);
+                    }
+
+                    // Another account already owns this username.
+                    if (
+                        newUsernameSnapshot.exists &&
+                        newUsernameSnapshot.data().uid !== uid
+                    ) {
+                        return {
+                            claimed: false
+                        };
+                    }
+
+                    const now = new Date();
+
+                    // Reserve the new username.
+                    transaction.set(
+                        newUsernameRef,
+                        {
+                            uid,
+                            username,
+                            createdAt:
+                                newUsernameSnapshot.exists
+                                    ? newUsernameSnapshot.data().createdAt || now
+                                    : now,
+                            updatedAt: now
+                        },
+                        { merge: true }
+                    );
+
+                    // Update the user's public profile.
+                    transaction.set(
+                        userRef,
+                        {
+                            username,
+                            updatedAt: now
+                        },
+                        { merge: true }
+                    );
+
+                    // Release the previous username only if
+                    // it is still owned by this same account.
+                    if (
+                        oldUsernameRef &&
+                        oldUsernameSnapshot?.exists &&
+                        oldUsernameSnapshot.data().uid === uid
+                    ) {
+                        transaction.delete(oldUsernameRef);
+                    }
+
+                    return {
+                        claimed: true,
+                        username
+                    };
+                }
+            );
+
+            if (!result.claimed) {
+                return res.status(409).json({
+                    success: false,
+                    error:
+                        "This username is already taken. Please choose another."
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Username reserved successfully.",
+                username: result.username
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Username reservation error:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error: "Unable to reserve username right now."
+            });
+        }
+    }
+);
 
 
 /* ==========================================
@@ -462,6 +616,18 @@ router.patch(
     }
 );
 
+if (
+    Object.prototype.hasOwnProperty.call(
+        incomingData,
+        "username"
+    )
+) {
+    return res.status(400).json({
+        success: false,
+        error:
+            "Use the username reservation endpoint to change your username."
+    });
+}
 
 /* ==========================================
    EXPORT ROUTER

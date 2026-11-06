@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020617">
+  <meta name="description" content="Complete your TrustNet account profile.">
+
+  <title>Complete Your Profile | TrustNet</title>
+
+  <link rel="stylesheet" href="/css/complete-profile.css">
+  <script type="module" src="/js/complete-profile.js"></script>
+</head>
+
+<body>
+
+  <header class="topbar">
+    <a href="/" class="brand">
+      <span class="brand-mark">T</span>
+      <span>TrustNet</span>
+    </a>
+
+    <span class="secure-label">
+      <span class="secure-dot"></span>
+      Account setup
+    </span>
+  </header>
+
+  <main class="page-layout">
+
+    <section class="intro-panel">
+      <span class="eyebrow">ONE LAST STEP</span>
+
+      <h1>
+        Build your
+        <span>TrustNet identity.</span>
+      </h1>
+
+      <p>
+        Complete your profile to access TrustNet's trust intelligence,
+        discovery and decision-support platform.
+      </p>
+
+      <div class="benefit-list">
+        <div class="benefit">
+          <span class="check-icon">✓</span>
+          <span>Personalized account experience</span>
+        </div>
+
+        <div class="benefit">
+          <span class="check-icon">✓</span>
+          <span>Discover businesses and opportunities</span>
+        </div>
+
+        <div class="benefit">
+          <span class="check-icon">✓</span>
+          <span>Access your TrustNet dashboard</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-panel">
+
+      <div class="form-card">
+
+        <div class="form-heading">
+          <span class="eyebrow">PROFILE SETUP</span>
+          <h2>Complete your profile</h2>
+          <p>Confirm your details before continuing.</p>
+        </div>
+
+        <div id="profileMessage"
+             class="message"
+             role="status"
+             aria-live="polite"></div>
+
+        <div class="account-preview">
+          <img
+            id="profilePhoto"
+            src="https://placehold.co/80x80/111c32/ffffff?text=T"
+            alt="Profile photo"
+          >
+
+          <div class="account-details">
+            <strong id="googleName">Loading account...</strong>
+            <span id="googleEmail">Please wait</span>
+            <span class="google-badge">Google account</span>
+          </div>
+        </div>
+
+        <form id="completeProfileForm" novalidate>
+
+          <div class="form-group">
+            <label for="fullName">Full name</label>
+            <input
+              type="text"
+              id="fullName"
+              maxlength="80"
+              autocomplete="name"
+              placeholder="Your full name"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-with-prefix">
+              <span>@</span>
+              <input
+                type="text"
+                id="username"
+                minlength="3"
+                maxlength="20"
+                autocomplete="username"
+                placeholder="yourusername"
+                required
+              >
+            </div>
+            <small>3–20 characters. Letters, numbers and underscores only.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="country">Country</label>
+            <select id="country" required>
+              <option value="">Loading countries...</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group dial-group">
+              <label for="dialCode">Dial code</label>
+              <select id="dialCode" required>
+                <option value="">Code</option>
+              </select>
+            </div>
+
+            <div class="form-group phone-group">
+              <label for="phone">Phone number</label>
+              <input
+                type="tel"
+                id="phone"
+                autocomplete="tel-national"
+                placeholder="Phone number"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="gender">Gender</label>
+            <select id="gender" required>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Date of birth</label>
+
+            <div class="date-row">
+              <select id="birthDay" required>
+                <option value="">Day</option>
+              </select>
+
+              <select id="birthMonth" required>
+                <option value="">Month</option>
+              </select>
+
+              <select id="birthYear" required>
+                <option value="">Year</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="terms-area">
+            <label class="terms-label">
+              <input type="checkbox" id="terms">
+
+              <span>
+                I agree to the
+                <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a>
+                and
+                <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            id="completeProfileButton"
+            class="submit-button"
+            disabled
+          >
+            Complete profile
+            <span aria-hidden="true">→</span>
+          </button>
+
+        </form>
+
+        <p class="bottom-note">
+          Your private account information is not intended to be
+          displayed on your public profile.
+        </p>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="page-footer">
+    <p>© <span id="currentYear">2026</span> TrustNet. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

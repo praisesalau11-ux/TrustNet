@@ -1,388 +1,206 @@
+
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Log in to your TrustNet account and access trust intelligence, discovery and decision tools.">
+  <meta name="theme-color" content="#020617">
 
-<meta charset="UTF-8">
+  <title>Log In | TrustNet</title>
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<meta
-    name="theme-color"
-    content="#1E3A8A"
->
-
-<meta
-    name="description"
-    content="Log in to your TrustNet account."
->
-
-<title>Login | TrustNet</title>
-
-<link
-    rel="stylesheet"
-    href="/css/login.css"
->
-
+  <link rel="stylesheet" href="/css/login.css">
+  <script type="module" src="/js/login.js"></script>
 </head>
 
 <body>
 
-<!-- ==========================================
-     BACKGROUND
-=========================================== -->
+  <header class="login-header">
+    <a href="/" class="brand">
+      <span class="brand-mark">T</span>
+      <span>TrustNet</span>
+    </a>
 
-<div class="page-background">
+    <a href="/signup.html" class="header-signup">
+      Create account
+    </a>
+  </header>
 
-    <div class="background-orb orb-one"></div>
+  <main class="login-layout">
 
-    <div class="background-orb orb-two"></div>
+    <section class="login-visual">
+      <div class="visual-content">
 
-    <div class="background-orb orb-three"></div>
-
-</div>
-
-
-<!-- ==========================================
-     HEADER
-=========================================== -->
-
-<header class="auth-header">
-
-    <a
-        href="/"
-        class="brand"
-    >
-
-        <div class="brand-icon">
-            T
-        </div>
-
-        <span class="brand-name">
-            TrustNet
+        <span class="visual-label">
+          TRUST. INTELLIGENCE. CLARITY.
         </span>
 
-    </a>
+        <h1>
+          Make better decisions.
+          <span>With better information.</span>
+        </h1>
 
+        <p>
+          Access a platform designed to help you evaluate trust,
+          discover opportunities and make informed decisions.
+        </p>
 
-    <a
-        href="/signup.html"
-        class="header-signup"
-    >
-        Create account
-    </a>
+        <div class="visual-points">
+          <div class="visual-point">
+            <span class="point-icon">✓</span>
+            <span>Evidence-focused trust intelligence</span>
+          </div>
 
-</header>
+          <div class="visual-point">
+            <span class="point-icon">✓</span>
+            <span>Global discovery and connections</span>
+          </div>
 
-
-<!-- ==========================================
-     MAIN
-=========================================== -->
-
-<main class="login-container">
-
-
-    <!-- ======================================
-         LOGIN CARD
-    ======================================= -->
-
-    <section class="login-card">
-
-
-        <!-- Card Header -->
-
-        <div class="login-header">
-
-            <div class="login-icon">
-                T
-            </div>
-
-            <h1>
-                Welcome back
-            </h1>
-
-            <p>
-                Log in to your TrustNet account
-                and continue building your
-                trusted identity.
-            </p>
-
+          <div class="visual-point">
+            <span class="point-icon">✓</span>
+            <span>AI-assisted decision support</span>
+          </div>
         </div>
 
+      </div>
 
-        <!-- ==================================
-             LOGIN FORM
-        =================================== -->
+      <div class="visual-decoration decoration-one"></div>
+      <div class="visual-decoration decoration-two"></div>
+    </section>
 
-        <form
-            id="loginForm"
-            class="login-form"
-            novalidate
+    <section class="login-panel">
+
+      <div class="login-card">
+
+        <div class="mobile-brand">
+          <span class="brand-mark">T</span>
+          <span>TrustNet</span>
+        </div>
+
+        <div class="login-heading">
+          <span class="eyebrow">WELCOME BACK</span>
+          <h2>Log in to TrustNet</h2>
+          <p>Enter your account details to continue.</p>
+        </div>
+
+        <div
+          id="loginMessage"
+          class="login-message"
+          role="status"
+          aria-live="polite"
+        ></div>
+
+        <button
+          type="button"
+          class="google-button"
+          id="googleLoginButton"
         >
+          <svg
+            viewBox="0 0 48 48"
+            width="19"
+            height="19"
+            aria-hidden="true"
+          >
+            <path fill="#EA4335"
+              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4"
+              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.73 6C44.43 37.91 46.98 31.83 46.98 24.55z"/>
+            <path fill="#FBBC05"
+              d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853"
+              d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.89 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
 
+          <span>Continue with Google</span>
+        </button>
 
-            <!-- Email -->
+        <div class="divider">
+          <span></span>
+          <p>OR CONTINUE WITH EMAIL</p>
+          <span></span>
+        </div>
 
-            <div class="form-group">
+        <form id="loginForm" novalidate>
 
-                <label
-                    for="email"
-                >
-                    Email address
-                </label>
+          <div class="form-group">
+            <label for="email">Email address</label>
 
-                <div class="input-wrapper">
-
-                    <span class="input-icon">
-                        @
-                    </span>
-
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="Enter your email"
-                        autocomplete="email"
-                        required
-                    >
-
-                </div>
-
-                <small
-                    class="field-error"
-                    id="emailError"
-                ></small>
-
-            </div>
-
-
-            <!-- Password -->
-
-            <div class="form-group">
-
-                <div class="password-label-row">
-
-                    <label
-                        for="password"
-                    >
-                        Password
-                    </label>
-
-                </div>
-
-
-                <div class="input-wrapper">
-
-                    <span class="input-icon">
-                        •
-                    </span>
-
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="Enter your password"
-                        autocomplete="current-password"
-                        required
-                    >
-
-                    <button
-                        type="button"
-                        class="password-toggle"
-                        id="passwordToggle"
-                        aria-label="Show password"
-                    >
-                        Show
-                    </button>
-
-                </div>
-
-                <small
-                    class="field-error"
-                    id="passwordError"
-                ></small>
-
-            </div>
-
-
-            <!-- Forgot Password -->
-
-            <div class="form-options">
-
-                <label class="remember-option">
-
-                    <input
-                        type="checkbox"
-                        id="rememberMe"
-                    >
-
-                    <span>
-                        Remember me
-                    </span>
-
-                </label>
-
-
-                <a
-                    href="#"
-                    id="forgotPassword"
-                    class="forgot-password"
-                >
-                    Forgot password?
-                </a>
-
-            </div>
-
-
-            <!-- Message -->
-
-            <div
-                id="loginMessage"
-                class="login-message"
-                role="alert"
-                aria-live="polite"
-            ></div>
-
-
-            <!-- Login Button -->
-
-            <button
-                type="submit"
-                id="loginButton"
-                class="login-button"
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
             >
+          </div>
 
-                <span
-                    class="button-text"
-                >
-                    Log in
-                </span>
+          <div class="form-group">
+            <div class="password-label">
+              <label for="password">Password</label>
 
-                <span
-                    class="button-arrow"
-                >
-                    →
-                </span>
+              <button
+                type="button"
+                id="forgotPasswordButton"
+                class="forgot-link"
+              >
+                Forgot password?
+              </button>
+            </div>
 
-            </button>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+              >
 
+              <button
+                type="button"
+                id="togglePassword"
+                class="password-toggle"
+                aria-label="Show password"
+              >
+                Show
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="loginButton"
+            class="login-button"
+          >
+            Log in
+            <span aria-hidden="true">→</span>
+          </button>
 
         </form>
 
+        <p class="signup-prompt">
+          Don't have an account?
+          <a href="/signup.html">Create one</a>
+        </p>
 
-        <!-- ==================================
-             DIVIDER
-        =================================== -->
+        <p class="legal-note">
+          By continuing, you agree to our
+          <a href="/terms.html" target="_blank" rel="noopener">Terms</a>
+          and
+          <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+        </p>
 
-        <div class="auth-divider">
-
-            <span></span>
-
-            <p>
-                or
-            </p>
-
-            <span></span>
-
-        </div>
-
-
-        <!-- ==================================
-             GOOGLE LOGIN
-        =================================== -->
-
-        <button
-            type="button"
-            id="googleLoginButton"
-            class="google-button"
-        >
-
-            <span class="google-icon">
-                G
-            </span>
-
-            <span>
-                Continue with Google
-            </span>
-
-        </button>
-
-
-        <!-- ==================================
-             SIGNUP
-        =================================== -->
-
-        <div class="signup-prompt">
-
-            <span>
-                Don't have a TrustNet account?
-            </span>
-
-            <a href="/signup.html">
-                Create one
-            </a>
-
-        </div>
-
+      </div>
 
     </section>
 
+  </main>
 
-    <!-- ======================================
-         TRUST MESSAGE
-    ======================================= -->
-
-    <div class="security-note">
-
-        <span class="security-icon">
-            ✓
-        </span>
-
-        <p>
-            Your account information is protected
-            by Firebase Authentication.
-        </p>
-
-    </div>
-
-
-</main>
-
-
-<!-- ==========================================
-     FOOTER
-=========================================== -->
-
-<footer class="auth-footer">
-
-    <p>
-        © 2026 TrustNet. All rights reserved.
-    </p>
-
-    <div class="footer-links">
-
-        <a href="/">
-            Home
-        </a>
-
-    </div>
-
-</footer>
-
-
-<!-- ==========================================
-     JAVASCRIPT
-=========================================== -->
-
-<script
-    type="module"
-    src="/js/login.js"
-></script>
+  <footer class="login-footer">
+    <p>© <span id="currentYear">2026</span> TrustNet. All rights reserved.</p>
+  </footer>
 
 </body>
-
 </html>

@@ -1,3 +1,4 @@
+
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -33,17 +34,12 @@ router.post("/assess", authMiddleware, async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: "Trust assessment created.",
+            message: "Trust assessment submitted. Independent analysis has not yet been completed.",
             assessment
         });
 
     } catch (error) {
-        if (
-            error.message?.startsWith("Invalid ") ||
-            error.message?.includes("required") ||
-            error.message?.includes("must ") ||
-            error.message?.includes("Each ")
-        ) {
+        if (error.statusCode === 400) {
             return res.status(400).json({
                 success: false,
                 error: error.message
@@ -62,7 +58,7 @@ router.post("/assess", authMiddleware, async (req, res) => {
 
 /* ==========================================
    LIST THE SIGNED-IN USER'S ASSESSMENTS
-   GET /api/trust/assessments
+   GET /api/trust/assessments?limit=50
 ========================================== */
 
 router.get("/assessments", authMiddleware, async (req, res) => {
@@ -114,6 +110,13 @@ router.get("/assess/:id", authMiddleware, async (req, res) => {
         });
 
     } catch (error) {
+        if (error.statusCode === 400) {
+            return res.status(400).json({
+                success: false,
+                error: error.message
+            });
+        }
+
         console.error("Get trust assessment error:", error);
 
         return res.status(500).json({
